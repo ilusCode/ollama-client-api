@@ -1,0 +1,9 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-server
+    ports:
+      - "11434:11434" # Puerto por defecto de la API
+    volumes:
+      - ./ollama_data:/root/.ollama # Persiste los modelos descargados
+    restart: unless-stopped
