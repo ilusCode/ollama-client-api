@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="OllamaClientApiApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+    <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UnknownPolicyInFreeMode" />
+    <module name="ollama_client_api" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.iluscode.ollama_client_api.OllamaClientApiApplication" />
+    <extension name="coverage">
+      <pattern>
+        <option name="PATTERN" value="com.iluscode.ollama_client_api.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
