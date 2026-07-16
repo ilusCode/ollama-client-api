@@ -1,0 +1,3 @@
+spring:
+  application:
+    name: ollama_client_api
