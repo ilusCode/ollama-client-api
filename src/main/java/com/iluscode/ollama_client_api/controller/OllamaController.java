@@ -2,8 +2,7 @@ package com.iluscode.ollama_client_api.controller;
 
 import com.iluscode.ollama_client_api.model.OllamaClientRequestBody;
 import com.iluscode.ollama_client_api.model.OllamaClientResponseBody;
-import com.iluscode.ollama_client_api.model.OllamaResponse;
-import com.iluscode.ollama_client_api.service.IConversationService;
+ import com.iluscode.ollama_client_api.service.IConversationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
