@@ -1,220 +1,191 @@
-🧠 Ollama Local con Docker
+# 🧠 Ollama Client API
 
-Guía paso a paso para levantar un servidor de IA local usando Ollama dentro de contenedores Docker.
+API REST en **Spring Boot 4** que expone un endpoint de chat sencillo sobre un servidor **local** de
+[Ollama](https://ollama.com). Recibe un mensaje, se lo envía al modelo (por defecto `llama3.2`) y
+devuelve la respuesta generada. Todo se ejecuta en tu máquina, sin enviar datos a servicios externos.
 
-📋 Requisitos Previos
+![Java](https://img.shields.io/badge/Java-26-ED8B00?logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1-6DB33F?logo=springboot&logoColor=white)
+![WebFlux](https://img.shields.io/badge/Spring-WebFlux-6DB33F?logo=spring&logoColor=white)
+![Ollama](https://img.shields.io/badge/Ollama-local_LLM-000000?logo=ollama&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
 
-Docker y Docker Compose instalados
+---
 
-Instalar Docker Desktop (Windows/Mac)
-Instalar Docker Engine (Linux)
-Mínimo 8 GB de RAM (16 GB recomendado)
-~8 GB de espacio libre en disco para modelos
-Conexión a internet (solo para la descarga inicial del modelo)
-🚀 Instalación Rápida
+## 🏗️ Cómo funciona
 
-1. Clonar o crear el proyecto
+```
+Cliente ──POST /api/chat──▶ Ollama Client API (Spring Boot :8080)
+                                   │  WebClient
+                                   ▼
+                           Ollama (:11434) POST /api/generate ──▶ llama3.2
+```
 
-bash
-mkdir ollama-local
-cd ollama-local
-2. Crear el archivo docker-compose.yml
+| Capa | Clase | Responsabilidad |
+|------|-------|-----------------|
+| Controller | `OllamaController` | Expone `POST /api/chat` |
+| Service | `ConversationService` (`IConversationService`) | Construye la petición a Ollama y transforma la respuesta |
+| Config | `WebClientConfig` | Crea el `WebClient` apuntando a `host.ollama-service` |
+| Model | `OllamaClientRequestBody` / `OllamaClientResponseBody` | Contrato público de la API |
+| Model | `OllamRequest` / `OllamaResponse` | Contrato con la API de Ollama |
 
-yaml
-services:
-ollama:
-image: ollama/ollama:latest
-container_name: ollama-server
-ports:
-- "11434:11434"
-volumes:
-- ./ollama_data:/root/.ollama
-restart: unless-stopped
-environment:
-- OLLAMA_KEEP_ALIVE=24h
-- OLLAMA_HOST=0.0.0.0
-3. Levantar el servidor
+## 📡 API
 
-bash
-docker compose up -d
-4. Descargar un modelo
+### `POST /api/chat`
 
-bash
-# Modelo pequeño y rápido (recomendado para empezar)
-docker exec -it ollama-server ollama pull llama3.2:1b
+**Request**
 
-# Modelo equilibrado (calidad/rendimiento)
-docker exec -it ollama-server ollama pull llama3.2:3b
-
-# Modelo más potente (requiere más RAM)
-docker exec -it ollama-server ollama pull llama3.1:8b
-5. Probar la instalación
-
-bash
-curl -X POST http://localhost:11434/api/generate \
--H "Content-Type: application/json" \
--d '{"model": "llama3.2:1b", "prompt": "Di Hola mundo", "stream": false}'
-🎯 Modelos Recomendados
-
-Modelo	Tamaño	RAM Mínima	Uso Recomendado
-llama3.2:1b	1.3 GB	~4 GB	Pruebas, respuestas rápidas
-llama3.2:3b	2.8 GB	~8 GB	Uso diario, buen rendimiento
-gemma2:2b	2.1 GB	~6 GB	Alternativa ligera
-llama3.1:8b	8.5 GB	~16 GB	Tareas complejas
-qwen2.5:14b	14 GB	~24 GB	Alto rendimiento
-🔧 Comandos Útiles
-
-Gestión del contenedor
-
-bash
-# Ver estado del contenedor
-docker ps | grep ollama
-
-# Ver logs
-docker logs -f ollama-server
-
-# Detener el servidor
-docker compose down
-
-# Reiniciar el servidor
-docker compose restart
-
-# Actualizar a la última versión
-docker compose pull
-docker compose up -d
-Gestión de modelos
-
-bash
-# Listar modelos descargados
-docker exec -it ollama-server ollama list
-
-# Eliminar un modelo
-docker exec -it ollama-server ollama rm llama3.2:1b
-
-# Ver información de un modelo
-docker exec -it ollama-server ollama show llama3.2:1b
-Interacción desde terminal
-
-bash
-# Modo interactivo (chat)
-docker exec -it ollama-server ollama run llama3.2:1b
-
-# Consulta única
-docker exec -it ollama-server ollama run llama3.2:1b "¿Qué es Docker?"
-💻 Uso desde código
-
-Python
-
-python
-import requests
-import json
-
-response = requests.post(
-'http://localhost:11434/api/generate',
-json={
-'model': 'llama3.2:1b',
-'prompt': 'Explica la IA en una frase',
-'stream': False
+```json
+{
+  "message": "¿Qué es Docker?"
 }
-)
+```
 
-print(json.loads(response.text)['response'])
-JavaScript / Node.js
+**Response `200 OK`**
 
-javascript
-const response = await fetch('http://localhost:11434/api/generate', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({
-model: 'llama3.2:1b',
-prompt: 'Explica la IA en una frase',
-stream: false
-})
-});
+```json
+{
+  "message": "Docker es una plataforma que permite empaquetar aplicaciones en contenedores...",
+  "time": "2026-10-29T12:30:45.123456"
+}
+```
 
-const data = await response.json();
-console.log(data.response);
-⚡ Aceleración con GPU (NVIDIA)
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `message` | `string` | Texto generado por el modelo |
+| `time` | `string` | Fecha y hora (ISO-8601, hora local del servidor) en que se recibió la respuesta |
 
-En Linux
+**Ejemplo con curl**
 
-bash
-# Instalar NVIDIA Container Toolkit
-distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
-curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+```bash
+curl -X POST http://localhost:8080/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Explica la IA en una frase"}'
+```
 
-sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
-sudo systemctl restart docker
-Modificar docker-compose.yml para GPU
+> Si Ollama no está corriendo o el modelo no está descargado, la API responde con un error `500`.
 
-yaml
-services:
-ollama:
-image: ollama/ollama:latest
-container_name: ollama-server
-ports:
-- "11434:11434"
-volumes:
-- ./ollama_data:/root/.ollama
-restart: unless-stopped
-deploy:
-resources:
-reservations:
-devices:
-- driver: nvidia
-count: all
-capabilities: [gpu]
-🗑️ Desinstalación Completa
+## 📋 Requisitos
 
-bash
-# Detener y eliminar contenedor
-docker compose down -v
+- **Java 26**
+- **Maven 3.9+** (el proyecto no incluye Maven Wrapper)
+- **Docker** y Docker Compose, para levantar Ollama
+- Mínimo 8 GB de RAM (16 GB recomendado) y ~3 GB libres para el modelo `llama3.2`
 
-# Eliminar datos de modelos (opcional)
-rm -rf ./ollama_data
+## 🚀 Puesta en marcha
 
-# Eliminar imagen (opcional)
-docker rmi ollama/ollama:latest
-📚 Recursos Adicionales
+### 1. Levantar Ollama
 
-Biblioteca de modelos de Ollama
-Documentación oficial de la API
-Modelos recomendados según hardware
-⚠️ Solución de Problemas
+El repositorio incluye [`docs/docker-compose.yml`](docs/docker-compose.yml):
 
-Error: "port is already allocated"
+```bash
+cd docs
+docker compose up -d
+```
 
-bash
-# Cambiar el puerto en docker-compose.yml
-ports:
-- "11435:11434"  # Cambia el puerto externo
+### 2. Descargar el modelo
 
-# O detener el proceso que usa el puerto
-sudo lsof -i :11434
-kill -9 [PID]
-Error: "no space left on device"
+```bash
+docker exec -it ollama-server ollama pull llama3.2
+```
 
-bash
-# Limpiar modelos no usados
-docker exec -it ollama-server ollama prune
+Comprueba que Ollama responde:
 
-# Eliminar contenedores/volúmenes huérfanos
-docker system prune -f
-El modelo es muy lento
+```bash
+curl http://localhost:11434/api/generate \
+  -d '{"model": "llama3.2", "prompt": "Di hola mundo", "stream": false}'
+```
 
-bash
-# Usar un modelo más pequeño
-docker exec -it ollama-server ollama pull llama3.2:1b
+### 3. Ejecutar la API
 
-# Reducir el contexto (menos memoria)
-curl -X POST http://localhost:11434/api/generate \
--H "Content-Type: application/json" \
--d '{"model": "llama3.2:3b", "prompt": "Hola", "options": {"num_ctx": 512}}'
-📝 Notas Importantes
+```bash
+mvn spring-boot:run
+```
 
-Todos los datos se almacenan localmente en la carpeta ./ollama_data
-No se envían datos a servicios externos
-Puedes usar Ollama sin conexión a internet después de descargar los modelos
-El tiempo de respuesta depende de tu hardware (CPU/GPU)
-¿Necesitas ayuda? Abre un issue o consulta la documentación oficial.
+La API queda disponible en `http://localhost:8080`.
+
+> **IntelliJ IDEA:** en [`docs/launcher/`](docs/launcher) hay una configuración de ejecución lista para importar.
+
+## ⚙️ Configuración
+
+`src/main/resources/application.yaml`
+
+```yaml
+api:
+  ia:
+    model: llama3.2        # Modelo de Ollama a usar
+    stream: false          # Respuesta completa (no streaming)
+
+host:
+  ollama-service: "http://127.0.0.1:11434"   # URL del servidor Ollama
+
+service:
+  ollama-service: /api/generate              # Endpoint de Ollama
+```
+
+Cualquier propiedad se puede sobrescribir al arrancar, por ejemplo para usar otro modelo:
+
+```bash
+mvn spring-boot:run -Dspring-boot.run.arguments="--api.ia.model=llama3.2:1b"
+```
+
+### Modelos sugeridos
+
+| Modelo | Tamaño | RAM mínima | Uso |
+|--------|--------|------------|-----|
+| `llama3.2:1b` | 1.3 GB | ~4 GB | Pruebas, respuestas rápidas |
+| `llama3.2` (3b) | 2.0 GB | ~8 GB | Uso diario (por defecto) |
+| `gemma2:2b` | 1.6 GB | ~6 GB | Alternativa ligera |
+| `llama3.1:8b` | 4.9 GB | ~16 GB | Tareas más complejas |
+
+## 🔧 Comandos útiles de Ollama
+
+```bash
+docker logs -f ollama-server                       # Ver logs
+docker exec -it ollama-server ollama list          # Modelos descargados
+docker exec -it ollama-server ollama rm llama3.2   # Eliminar un modelo
+docker compose -f docs/docker-compose.yml down     # Detener Ollama
+```
+
+### Aceleración con GPU (NVIDIA)
+
+Con el [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
+instalado, agrega esto al servicio `ollama` de `docker-compose.yml`:
+
+```yaml
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+```
+
+## ⚠️ Solución de problemas
+
+| Problema | Solución |
+|----------|----------|
+| `Connection refused` al llamar a `/api/chat` | Ollama no está corriendo: `docker compose up -d` en `docs/` |
+| Ollama responde `model not found` | Descarga el modelo: `docker exec -it ollama-server ollama pull llama3.2` |
+| `port is already allocated` (11434) | Cambia el puerto externo en `docker-compose.yml` (`"11435:11434"`) y en `host.ollama-service` |
+| Respuestas muy lentas | Usa un modelo más pequeño (`llama3.2:1b`) o activa la GPU |
+
+## 📁 Estructura
+
+```
+├── docs/
+│   ├── docker-compose.yml          # Servidor Ollama
+│   └── launcher/                   # Configuración de ejecución para IntelliJ
+├── src/main/java/com/iluscode/ollama_client_api/
+│   ├── config/WebClientConfig.java
+│   ├── controller/OllamaController.java
+│   ├── model/
+│   └── service/
+├── src/main/resources/application.yaml
+└── pom.xml
+```
+
+## 👤 Autor
+
+**Eduardo Fernández Morales** — [@ilusCode](https://github.com/ilusCode) · [LinkedIn](https://www.linkedin.com/in/eduardo-fernandez-morales/)
