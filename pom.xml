@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.iluscode</groupId>
     <artifactId>ollama_client_api</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>ollama_client_api</name>
     <description>ollama_client_api</description>
     <url/>
